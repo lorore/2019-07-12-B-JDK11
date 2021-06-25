@@ -11,8 +11,10 @@ import it.polito.tdp.food.model.Condiment;
 import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Portion;
 
-public class FoodDao {
-	public List<Food> listAllFoods(){
+public class FoodDao 
+{
+	public List<Food> listAllFoods()
+	{
 		String sql = "SELECT * FROM food" ;
 		try {
 			Connection conn = DBConnect.getConnection() ;
@@ -43,7 +45,8 @@ public class FoodDao {
 
 	}
 	
-	public List<Condiment> listAllCondiments(){
+	public List<Condiment> listAllCondiments()
+	{
 		String sql = "SELECT * FROM condiment" ;
 		try {
 			Connection conn = DBConnect.getConnection() ;
@@ -75,7 +78,8 @@ public class FoodDao {
 		}
 	}
 	
-	public List<Portion> listAllPortions(){
+	public List<Portion> listAllPortions()
+	{
 		String sql = "SELECT * FROM portion" ;
 		try {
 			Connection conn = DBConnect.getConnection() ;

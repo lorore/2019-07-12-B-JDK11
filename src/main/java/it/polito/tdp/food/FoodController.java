@@ -1,7 +1,3 @@
-/**
- * Sample Skeleton for 'Food.fxml' Controller Class
- */
-
 package it.polito.tdp.food;
 
 import java.net.URL;
@@ -15,44 +11,87 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
-public class FoodController {
-	
-	private Model model;
-
-    @FXML // ResourceBundle that was given to the FXMLLoader
+public class FoodController 
+{
+    @FXML
     private ResourceBundle resources;
 
-    @FXML // URL location of the FXML file that was given to the FXMLLoader
+    @FXML
     private URL location;
 
-    @FXML // fx:id="txtPorzioni"
-    private TextField txtPorzioni; // Value injected by FXMLLoader
-
-    @FXML // fx:id="txtK"
-    private TextField txtK; // Value injected by FXMLLoader
-
-    @FXML // fx:id="btnAnalisi"
-    private Button btnAnalisi; // Value injected by FXMLLoader
-
-    @FXML // fx:id="btnGrassi"
-    private Button btnGrassi; // Value injected by FXMLLoader
-
-    @FXML // fx:id="btnSimula"
-    private Button btnSimula; // Value injected by FXMLLoader
-
-    @FXML // fx:id="boxFood"
-    private ComboBox<?> boxFood; // Value injected by FXMLLoader
-
-    @FXML // fx:id="txtResult"
-    private TextArea txtResult; // Value injected by FXMLLoader
+    @FXML
+    private TextField txtPorzioni;
 
     @FXML
-    void doCreaGrafo(ActionEvent event) {
-    	txtResult.clear();
-    	txtResult.appendText("Creazione grafo...");
+    private TextField txtK;
+
+    @FXML
+    private Button btnAnalisi;
+
+    @FXML
+    private Button btnGrassi;
+
+    @FXML
+    private Button btnSimula;
+
+    @FXML
+    private ComboBox<?> boxFood;
+
+    @FXML
+    private TextArea txtResult;
+    
+	private Model model;
+
+
+	@FXML
+    void doCreaGrafo(ActionEvent event) 
+	{
+    	String inputPortions = this.txtPorzioni.getText();
+    	
+    	if(inputPortions == null || inputPortions.isBlank())
+    	{
+    		this.txtResult.setText("Errore: inserire un valore intero di porzioni");
+    		return;
+    	}
+    	
+    	int numPortions;
+    	
+    	try
+		{
+			numPortions = Integer.parseInt(inputPortions);
+		}
+		catch(NumberFormatException nfe)
+		{
+			this.txtResult.setText(String.format(
+					"Errore di formato: \"%s\" non è un intero valido.\nInserire un valore intero di porzioni",
+					inputPortions));
+    		return;
+		}
+    	
+    	if(numPortions < 1) 
+    	{
+    		this.txtResult.setText("Errore: inserire un valore intero maggiore o uguale a 1");
+    		return;
+    	}
+    	
+    	this.model.createGraph(numPortions);
+    	
+    	String output = this.printGraphInfo();
+    	this.txtResult.setText(output);
     }
 
-    @FXML
+    private String printGraphInfo()
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("Grafo creato");
+		sb.append("\n# Vertci: ").append(this.model.getNumVertices());
+		sb.append("\n# Archi: ").append(this.model.getNumEdges());
+
+		return sb.toString();
+	}
+
+	@FXML
     void doGrassi(ActionEvent event) {
     	txtResult.clear();
     	txtResult.appendText("Analisi grassi...");
@@ -64,8 +103,9 @@ public class FoodController {
     	txtResult.appendText("Simulazione...");
     }
 
-    @FXML // This method is called by the FXMLLoader when initialization is complete
-    void initialize() {
+    @FXML
+    void initialize() 
+    {
         assert txtPorzioni != null : "fx:id=\"txtPorzioni\" was not injected: check your FXML file 'Food.fxml'.";
         assert txtK != null : "fx:id=\"txtK\" was not injected: check your FXML file 'Food.fxml'.";
         assert btnAnalisi != null : "fx:id=\"btnAnalisi\" was not injected: check your FXML file 'Food.fxml'.";
@@ -75,7 +115,8 @@ public class FoodController {
         assert txtResult != null : "fx:id=\"txtResult\" was not injected: check your FXML file 'Food.fxml'.";
     }
     
-    public void setModel(Model model) {
+    public void setModel(Model model) 
+    {
     	this.model = model;
     }
 }
