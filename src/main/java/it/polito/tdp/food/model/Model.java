@@ -12,18 +12,22 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.builder.GraphTypeBuilder;
 
 import it.polito.tdp.food.db.FoodDao;
+import it.polito.tdp.simulation.SimulationResult;
+import it.polito.tdp.simulation.Simulator;
 
 public class Model 
 {
 	private Graph<Food, DefaultWeightedEdge> graph;
 	private final FoodDao dao;
-	private Map<Integer, Food> foodIdMap;
+	private final Map<Integer, Food> foodIdMap;
+	private final Simulator simulator;
 	
 	
 	public Model()
 	{
 		this.dao = new FoodDao();
 		this.foodIdMap = new HashMap<>();
+		this.simulator = new Simulator();
 	}
 
 	public void createGraph(int numMinPortions)
@@ -62,31 +66,45 @@ public class Model
 		return orderedFoods;
 	}
 
-	public List<Adjacence> getMinimumAdjacentFoodsOf(Food selectedFood)
+	public static List<Adjacence> getMinimumAdjacences(Graph<Food,DefaultWeightedEdge> graph, 
+			Food selectedFood, int maxNum)
 	{
-		if(this.graph == null || this.graph.vertexSet().size() == 0)
+		if(graph == null || graph.vertexSet().size() == 0)
 			return null;
 		
 		List<Adjacence> minimumAdjacences = new ArrayList<>();
 		
-		for(var edge : this.graph.outgoingEdgesOf(selectedFood))
+		for(var edge : graph.outgoingEdgesOf(selectedFood))
 		{
-			double weight = this.graph.getEdgeWeight(edge);
-			Food adjacentFood = this.graph.getEdgeTarget(edge);
+			double weight = graph.getEdgeWeight(edge);
+			Food adjacentFood = graph.getEdgeTarget(edge);
 			Adjacence a = new Adjacence(selectedFood, adjacentFood, weight);
 			minimumAdjacences.add(a);
 		}
 		
 		minimumAdjacences.sort((a1,a2) -> Double.compare(a1.getWeight(), a2.getWeight()));
 		
-		if(minimumAdjacences.size() > 5)
+		if(minimumAdjacences.size() > maxNum)
 		{
-			int toRemove = minimumAdjacences.size() - 5;
+			int toRemove = minimumAdjacences.size() - maxNum;
 			for(int i=0; i<toRemove; i++)
 				minimumAdjacences.remove(minimumAdjacences.size() - 1); //remove last element n times
 		}
 		
 		return minimumAdjacences;
+	}
+	
+	public List<Adjacence> getMinimumAdjacentFoodsOf(Food selectedFood)
+	{
+		return getMinimumAdjacences(this.graph, selectedFood, 5);
+	}
+	
+	public SimulationResult runSimulation(int maxStations, Food startFood)
+	{
+		this.simulator.initialize(this.graph, maxStations, startFood);
+		
+		SimulationResult result = this.simulator.run();
+		return result;
 	}
 
 }

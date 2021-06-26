@@ -7,6 +7,7 @@ import java.util.ResourceBundle;
 import it.polito.tdp.food.model.Adjacence;
 import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Model;
+import it.polito.tdp.simulation.SimulationResult;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -61,7 +62,7 @@ public class FoodController
     	
     	try
 		{
-        	numPortions = Integer.parseInt(inputPortions);
+        	numPortions = Integer.parseInt(inputPortions.trim());
 		}
 		catch(NumberFormatException nfe)
 		{
@@ -164,9 +165,46 @@ public class FoodController
 	}
 
 	@FXML
-    void doSimula(ActionEvent event) {
-    	txtResult.clear();
-    	txtResult.appendText("Simulazione...");
+    void doSimula(ActionEvent event) 
+	{
+		Food selectedFood = this.boxFood.getValue();
+    	
+    	if(selectedFood == null) 
+    	{
+    		this.txtResult.setText("Errore: selezionare un cibo dal menù a tendina");
+    		return;
+    	}
+    	
+    	String inputK = this.txtK.getText();
+    	
+    	if(inputK == null || inputK.isBlank())
+    	{
+    		this.txtResult.setText("Errore: inserire un valore intero di k");
+    		return;
+    	}
+    	
+    	int numStations;
+    	try
+		{
+			numStations = Integer.parseInt(inputK);
+		}
+		catch(NumberFormatException nfe)
+		{
+			this.txtResult.setText("Errore di formato: inserire un valore intero di k valido");
+    		return;
+		}
+    	
+    	if(numStations < 1)
+    	{
+    		this.txtResult.setText("Errore: inserire un valore intero di k almeno pari a 1");
+    		return;
+    	}
+    	
+    	SimulationResult result = this.model.runSimulation(numStations, selectedFood);
+    	
+    	String output = String.format("Simulazione effettuata:\n- numero totale di cibi preparati: %d\n- Tempo totale di preparazione dei cibi: %f ore",
+    			result.getNumOfPreparedFoods(), result.getHourEndTime());
+    	this.txtResult.setText(output);
     }
 
     @FXML
