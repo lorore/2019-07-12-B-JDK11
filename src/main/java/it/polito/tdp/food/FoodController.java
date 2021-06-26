@@ -1,8 +1,11 @@
 package it.polito.tdp.food;
 
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.food.model.Adjacence;
+import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -35,7 +38,7 @@ public class FoodController
     private Button btnSimula;
 
     @FXML
-    private ComboBox<?> boxFood;
+    private ComboBox<Food> boxFood;
 
     @FXML
     private TextArea txtResult;
@@ -58,7 +61,7 @@ public class FoodController
     	
     	try
 		{
-			numPortions = Integer.parseInt(inputPortions);
+        	numPortions = Integer.parseInt(inputPortions);
 		}
 		catch(NumberFormatException nfe)
 		{
@@ -76,13 +79,28 @@ public class FoodController
     	
     	this.model.createGraph(numPortions);
     	
+    	//UI
     	String output = this.printGraphInfo();
     	this.txtResult.setText(output);
+    	
+    	this.boxFood.getItems().clear();
+    	List<Food> orderedFoods = this.model.getOrderedFoods();
+    	
+    	if(orderedFoods != null)
+    		this.boxFood.getItems().addAll(orderedFoods);
     }
 
     private String printGraphInfo()
 	{
+    	int numVertices = this.model.getNumVertices();
+    	
 		StringBuilder sb = new StringBuilder();
+		
+		if(numVertices == 0)
+		{
+			sb.append("Errore: grafo vuoto. Input troppo alto");
+			return sb.toString();
+		}
 		
 		sb.append("Grafo creato");
 		sb.append("\n# Vertci: ").append(this.model.getNumVertices());
@@ -92,12 +110,60 @@ public class FoodController
 	}
 
 	@FXML
-    void doGrassi(ActionEvent event) {
-    	txtResult.clear();
-    	txtResult.appendText("Analisi grassi...");
+    void doGrassi(ActionEvent event) 
+	{
+    	Food selectedFood = this.boxFood.getValue();
+    	
+    	if(selectedFood == null) 
+    	{
+    		this.txtResult.setText("Errore: selezionare un cibo dal menù a tendina");
+    		return;
+    	}
+    	
+    	List<Adjacence> minimumAdjacentFoods = this.model.getMinimumAdjacentFoodsOf(selectedFood);
+    	
+    	if(minimumAdjacentFoods == null) 
+    	{
+    		this.txtResult.setText("Errore: creare prima il grafo!");
+    		return;
+    	}
+    	
+    	String output = this.printOrderedMinimumAdjacences(selectedFood, minimumAdjacentFoods);
+    	this.txtResult.setText(output);
     }
 
-    @FXML
+    private String printOrderedMinimumAdjacences(Food selected, List<Adjacence> minimumAdjacences)
+	{
+    	if(minimumAdjacences.isEmpty())
+    		return "Il cibo selezionato (\"" + selected.toString() + "\") non presenta alcun cibo adiacente";
+    	
+    	StringBuilder sb = new StringBuilder();
+    	int num = minimumAdjacences.size();
+    	
+    	for(Adjacence a : minimumAdjacences)
+    	{
+    		if(sb.length() > 0)
+    			sb.append("\n");
+    		
+    		sb.append(a.getFood2()).append("  -  ").append(String.format("%.3f", a.getWeight()));
+    	}
+    	
+    	if(num == 1)
+    		sb.insert(0, "L'unico cibo con differenza grassi minore rispetto a \"" + 
+					selected.toString() + "\" è:\n\n");
+    	else
+    		sb.insert(0, "I "+num+" cibi con differenza grassi minore rispetto a \"" + 
+    						selected.toString() + "\" sono:\n\n");
+    	
+    	if(num != 5) 
+    	{
+    		sb.append("\n(Il cibo selezionato presenta meno di 5 cibi adiacenti)");
+    	}
+    	
+    	return sb.toString();
+	}
+
+	@FXML
     void doSimula(ActionEvent event) {
     	txtResult.clear();
     	txtResult.appendText("Simulazione...");
