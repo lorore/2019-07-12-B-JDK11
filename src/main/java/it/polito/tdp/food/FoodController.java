@@ -4,10 +4,9 @@ import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
 
-import it.polito.tdp.food.model.Adjacence;
 import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Model;
-import it.polito.tdp.simulation.SimulationResult;
+import it.polito.tdp.food.model.Successivo;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -50,161 +49,97 @@ public class FoodController
 	@FXML
     void doCreaGrafo(ActionEvent event) 
 	{
-    	String inputPortions = this.txtPorzioni.getText();
-    	
-    	if(inputPortions == null || inputPortions.isBlank())
-    	{
-    		this.txtResult.setText("Errore: inserire un valore intero di porzioni");
+    	this.txtResult.clear();
+		String s=this.txtPorzioni.getText().trim();
+    	if(s.isBlank()) {
+    		this.txtResult.setText("Nessuna porzione inserita!");
     		return;
     	}
     	
-    	int numPortions;
-    	
-    	try
-		{
-        	numPortions = Integer.parseInt(inputPortions.trim());
-		}
-		catch(NumberFormatException nfe)
-		{
-			this.txtResult.setText(String.format(
-					"Errore di formato: \"%s\" non è un intero valido.\nInserire un valore intero di porzioni",
-					inputPortions));
+    	Integer k;
+    	try {
+    		k=Integer.parseInt(s);
+    	}catch(NumberFormatException e) {
+    		this.txtResult.setText("Numero porzioni inserite non è un numero!");
     		return;
-		}
-    	
-    	if(numPortions < 1) 
-    	{
-    		this.txtResult.setText("Errore: inserire un valore intero maggiore o uguale a 1");
+    	}
+    	if(k<0) {
+    		this.txtResult.setText("Inserito un numero negativo di porzioni");
     		return;
     	}
     	
-    	this.model.createGraph(numPortions);
-    	
-    	//UI
-    	String output = this.printGraphInfo();
-    	this.txtResult.setText(output);
-    	
+    	String result=this.model.creaGrafo(k);
+    	this.txtResult.setText(result);
+    	List<Food> cibi=this.model.getVertici();
     	this.boxFood.getItems().clear();
-    	List<Food> orderedFoods = this.model.getOrderedFoods();
+    	this.boxFood.getItems().addAll(cibi);
+    	this.btnGrassi.setDisable(false);
+    	this.btnSimula.setDisable(false);
     	
-    	if(orderedFoods != null)
-    		this.boxFood.getItems().addAll(orderedFoods);
+    	
     }
 
-    private String printGraphInfo()
-	{
-    	int numVertices = this.model.getNumVertices();
-    	
-		StringBuilder sb = new StringBuilder();
-		
-		if(numVertices == 0)
-		{
-			sb.append("Errore: grafo vuoto. Input troppo alto");
-			return sb.toString();
-		}
-		
-		sb.append("Grafo creato");
-		sb.append("\n# Vertci: ").append(this.model.getNumVertices());
-		sb.append("\n# Archi: ").append(this.model.getNumEdges());
-
-		return sb.toString();
-	}
+   
 
 	@FXML
     void doGrassi(ActionEvent event) 
 	{
-    	Food selectedFood = this.boxFood.getValue();
+		this.txtResult.clear();
+		Food f=this.boxFood.getValue();
+		if(f==null) {
+			this.txtResult.setText("Nessun cibo selezionato");
+			return;
+		}
+		
+		List<Successivo> result=this.model.getPeggiori(f);
+		if(result.size()==0) {
+			this.txtResult.appendText("Il cibo selezionato non ha successivi");
+			return;
+		}
+		for(int i=0; i<result.size() && i<5 ; i++) {
+			this.txtResult.appendText(result.get(i).toString()+"\n");
+		}
+		
     	
-    	if(selectedFood == null) 
-    	{
-    		this.txtResult.setText("Errore: selezionare un cibo dal menù a tendina");
-    		return;
-    	}
-    	
-    	List<Adjacence> minimumAdjacentFoods = this.model.getMinimumAdjacentFoodsOf(selectedFood);
-    	
-    	if(minimumAdjacentFoods == null) 
-    	{
-    		this.txtResult.setText("Errore: creare prima il grafo!");
-    		return;
-    	}
-    	
-    	String output = this.printOrderedMinimumAdjacences(selectedFood, minimumAdjacentFoods);
-    	this.txtResult.setText(output);
     }
 
-    private String printOrderedMinimumAdjacences(Food selected, List<Adjacence> minimumAdjacences)
-	{
-    	if(minimumAdjacences.isEmpty())
-    		return "Il cibo selezionato (\"" + selected.toString() + "\") non presenta alcun cibo adiacente";
-    	
-    	StringBuilder sb = new StringBuilder();
-    	int num = minimumAdjacences.size();
-    	
-    	for(Adjacence a : minimumAdjacences)
-    	{
-    		if(sb.length() > 0)
-    			sb.append("\n");
-    		
-    		sb.append(a.getFood2()).append("  -  ").append(String.format("%.3f", a.getWeight()));
-    	}
-    	
-    	if(num == 1)
-    		sb.insert(0, "L'unico cibo con differenza grassi minore rispetto a \"" + 
-					selected.toString() + "\" è:\n\n");
-    	else
-    		sb.insert(0, "I "+num+" cibi con differenza grassi minore rispetto a \"" + 
-    						selected.toString() + "\" sono:\n\n");
-    	
-    	if(num != 5) 
-    	{
-    		sb.append("\n(Il cibo selezionato presenta meno di 5 cibi adiacenti)");
-    	}
-    	
-    	return sb.toString();
-	}
+    
 
 	@FXML
     void doSimula(ActionEvent event) 
 	{
-		Food selectedFood = this.boxFood.getValue();
-    	
-    	if(selectedFood == null) 
-    	{
-    		this.txtResult.setText("Errore: selezionare un cibo dal menù a tendina");
-    		return;
-    	}
-    	
-    	String inputK = this.txtK.getText();
-    	
-    	if(inputK == null || inputK.isBlank())
-    	{
-    		this.txtResult.setText("Errore: inserire un valore intero di k");
-    		return;
-    	}
-    	
-    	int numStations;
-    	try
-		{
-			numStations = Integer.parseInt(inputK);
+		this.txtResult.clear();
+		Food f=this.boxFood.getValue();
+		if(f==null) {
+			this.txtResult.appendText("Nessun cibo selezionato!");
+			return;
 		}
-		catch(NumberFormatException nfe)
-		{
-			this.txtResult.setText("Errore di formato: inserire un valore intero di k valido");
-    		return;
-		}
-    	
-    	if(numStations < 1)
-    	{
-    		this.txtResult.setText("Errore: inserire un valore intero di k almeno pari a 1");
+		
+		String s=this.txtK.getText().trim();
+    	if(s.isBlank()) {
+    		this.txtResult.setText("Nessuna porzione inserita!");
     		return;
     	}
     	
-    	SimulationResult result = this.model.runSimulation(numStations, selectedFood);
+    	Integer k;
+    	try {
+    		k=Integer.parseInt(s);
+    	}catch(NumberFormatException e) {
+    		this.txtResult.setText("Numero porzioni inserite non è un numero!");
+    		return;
+    	}
+    	if(k<0) {
+    		this.txtResult.setText("Inserito un numero negativo di porzioni");
+    		return;
+    	}
+		
+    	if(k<1 || k>10) {
+    		this.txtResult.setText("K deve essere compreso tra 1 e 10");
+    		return;
+    	}
     	
-    	String output = String.format("Simulazione effettuata:\n- numero totale di cibi preparati: %d\n- Tempo totale di preparazione dei cibi: %f ore",
-    			result.getNumOfPreparedFoods(), result.getHourEndTime());
-    	this.txtResult.setText(output);
+		String result=this.model.avviaSimulazione(k, f);
+		this.txtResult.appendText(result);
     }
 
     @FXML
@@ -222,5 +157,7 @@ public class FoodController
     public void setModel(Model model) 
     {
     	this.model = model;
+    	this.btnSimula.setDisable(true);
+    	this.btnGrassi.setDisable(true);
     }
 }

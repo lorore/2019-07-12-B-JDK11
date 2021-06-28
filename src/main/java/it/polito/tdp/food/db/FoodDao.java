@@ -10,9 +10,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import it.polito.tdp.food.model.Adjacence;
+import it.polito.tdp.food.model.Adiacenza;
 import it.polito.tdp.food.model.Condiment;
 import it.polito.tdp.food.model.Food;
+
 
 public class FoodDao 
 {
@@ -85,117 +86,81 @@ public class FoodDao
 			return null ;
 		}
 	}
+	
+	public void getVertici(Map<Integer, Food> idMap, int k) {
+		String sql="SELECT * "
+				+ "FROM food f "
+				+ "WHERE f.food_code IN( "
+				+ "SELECT p.food_code "
+				+ "FROM `portion` p "
+				+ "GROUP BY p.food_code "
+				+ "HAVING COUNT(*)>=?) ";
+		Connection conn = DBConnect.getConnection() ;
+		
 
-	public Collection<Food> getFoods(int numMinPortions, Map<Integer, Food> foodIdMap)
-	{
-		String sqlQuery = String.format("%s %s %s %s %s",
-							"SELECT f.food_code AS code, f.display_name AS name, COUNT(*) AS occurrencies",
-							"FROM food f, `portion` p",
-							"WHERE f.food_code = p.food_code",
-							"GROUP BY f.food_code, f.display_name",
-							"HAVING occurrencies >= ?");
-		
-		Collection<Food> foods = new HashSet<>();
-		
-		try 
-		{	
-			Connection connection = DBConnect.getConnection();
-			PreparedStatement statement = connection.prepareStatement(sqlQuery);
-			statement.setInt(1, numMinPortions);
-			ResultSet queryResult = statement.executeQuery();
-			
-			while(queryResult.next()) 
-			{
-				try 
-				{
-					int code = queryResult.getInt("code");
-					
-					if(!foodIdMap.containsKey(code))
-						foodIdMap.put(code, new Food(code, queryResult.getString("name")));
-					
-					foods.add(foodIdMap.get(code));
-				} 
-				catch (Throwable t) 
-				{
-					t.printStackTrace();
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, k);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+
+				Food f=new Food(res.getInt("food_code"),res.getString("display_name"));
+				if(!idMap.containsKey(f.getFood_code())) {
+					idMap.put(f.getFood_code(), f);
 				}
-			}
 			
-			queryResult.close();
-			statement.close();
-			connection.close();
-			return foods;
-		} 
-		catch (SQLException sqle) 
-		{
-			sqle.printStackTrace();
-			throw new RuntimeException("Dao error in getFoods()", sqle);
+
+			}
+			conn.close();
+			
+			
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+
+		
+	}
+	
+	public List<Adiacenza> getArchi(Map<Integer, Food> idMap, int k){
+		String sql="SELECT t1.food_code AS f1, t2.food_code AS f2, (t1.media-t2.media) AS peso "
+				+ "FROM ( "
+				+ "SELECT p.food_code, AVG(saturated_fats) AS media "
+				+ "FROM `portion` p "
+				+ "GROUP BY p.food_code "
+				+ "HAVING COUNT(*)>=?) AS t1, "
+				+ "(SELECT p.food_code, AVG(saturated_fats) AS media "
+				+ "FROM `portion` p "
+				+ "GROUP BY p.food_code "
+				+ "HAVING COUNT(*)>=?) AS t2 "
+				+ "WHERE t1.food_code<>t2.food_code "
+				+ "GROUP BY t1.food_code, t2.food_code "
+				+ "HAVING peso>0 ";
+			Connection conn = DBConnect.getConnection() ;
+			List<Adiacenza> result=new ArrayList<>();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, k);
+			st.setInt(2, k);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+
+				if(idMap.containsKey(res.getInt("f1")) && idMap.containsKey(res.getInt("f2"))) {
+					Food f1=idMap.get(res.getInt("f1"));
+					Food f2=idMap.get(res.getInt("f2"));
+					double peso=res.getDouble("peso");
+					result.add(new Adiacenza(f1, f2, peso));
+				}
+			
+
+			}
+			conn.close();
+			return result;
+			
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
-	public Collection<Adjacence> getFoodAdjacences(int numMinPortions, Map<Integer, Food> foodIdMap)
-	{
-		final String sqlQuery = String.format("%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s",
-									"SELECT F1.food_code AS code1, F2.food_code AS code2, (F1.fats - F2.fats) AS diff",
-									"FROM (SELECT food_code, AVG(saturated_fats) AS fats",
-										  "FROM `portion`",
-										  "GROUP BY food_code) AS F1,",
-										 "(SELECT food_code, AVG(saturated_fats) AS fats",
-										  "FROM `portion`",
-										  "GROUP BY food_code) AS F2",
-									"WHERE F1.food_code IN (SELECT food_code",
-										  					"FROM `portion`",
-										  					"GROUP BY food_code",
-										  					"HAVING COUNT(*) >= ?)",
-										  "AND F2.food_code IN (SELECT food_code",
-										  					"FROM `portion`",
-										  					"GROUP BY food_code",
-										  					"HAVING COUNT(*) >= ?)",
-										  "AND F1.food_code < F2.food_code",
-										  "AND diff <> 0");
-		
-		Collection<Adjacence> adjacences = new HashSet<>();
-		
-		try
-		{
-			Connection connection = DBConnect.getConnection();
-			PreparedStatement statement = connection.prepareStatement(sqlQuery);
-			statement.setInt(1, numMinPortions);
-			statement.setInt(2, numMinPortions);
-			ResultSet queryResult = statement.executeQuery();
-			
-			while(queryResult.next()) 
-			{
-				try 
-				{
-					int code1 = queryResult.getInt("code1");
-					int code2 = queryResult.getInt("code2");
-					
-					if(!foodIdMap.containsKey(code1) || !foodIdMap.containsKey(code2))
-						throw new RuntimeException("Food code not found in FoodIdMap");
-
-					Food food1 = foodIdMap.get(code1);
-					Food food2 = foodIdMap.get(code2);
-					double diff = queryResult.getDouble("diff");
-					
-					Adjacence newAdjacence = new Adjacence(food1, food2, diff);
-					adjacences.add(newAdjacence);
-				} 
-				catch (Throwable t) 
-				{
-					t.printStackTrace();
-				}
-			}
-			
-			queryResult.close();
-			statement.close();
-			connection.close();
-			return adjacences;
-		}
-		catch(SQLException sqle)
-		{
-			sqle.printStackTrace();
-			throw new RuntimeException("Dao error in getFoodAdjacences()", sqle);
-		}
-	}
+	
 }
